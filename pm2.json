@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "name": "next-api-service",
+      "script": "yarn",
+      "args": "start"
+    }
+  ]
+}
