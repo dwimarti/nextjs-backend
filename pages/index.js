@@ -1,10 +1,9 @@
-import styles from '../styles/Home.module.css'
-import Link from "next/link"
+import styles from '@styles/Home.module.css'
 
 export default function Home() {
   return (
     <div className={styles.container}>
-      <p>please go to <Link href="/api">/api</Link> page</p>
+      <pre className={styles.pre}>Hello, welcome to NextJS</pre>
     </div>
   )
 }
