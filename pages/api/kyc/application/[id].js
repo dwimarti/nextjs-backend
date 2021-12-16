@@ -23,11 +23,22 @@ async function handler(req, res) {
           res.status(500).json({ message: "error", details: err })
         })
       break;
-  
+    
+    case "POST":
+      res.status(200).send(req.body)
+      break;
     default:
-      res.statusCode(500)
+      res.status(405).send("Method not allowed")
       break;
   }
+}
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
 }
 
 export default handler;

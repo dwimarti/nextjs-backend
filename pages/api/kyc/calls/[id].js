@@ -10,9 +10,14 @@ async function handler(req, res) {
   await initMiddleware(req, res, cors)
   switch (req.method) {
     case "GET":
-      kyc.select("*").from("application")
+      const { id } = req.query;
+      kyc.select("*").from("call").where({applicationid: id})
         .then(data => {
-          res.status(200).json({ message: "ok", data })
+          if (data.length > 0) {
+            res.status(200).json({ message: "ok", data })
+          } else {
+            res.status(404).json({ message: "not found" })
+          }
         })
         .catch(err => {
           res.status(500).json({ message: "error", details: err })

@@ -1,5 +1,5 @@
 import Cors from "cors";
-import kyc from "@libs/knexOrm/kyc";
+import asterisk from "@libs/knexOrm/asterisk";
 import initMiddleware from "@libs/initMiddleware";
 
 const cors = Cors({
@@ -10,7 +10,7 @@ async function handler(req, res) {
   await initMiddleware(req, res, cors)
   switch (req.method) {
     case "GET":
-      kyc.select("*").from("application")
+      asterisk.select("nama", "username", "created", "email", "phone_number", "extension_user", "websocket", "role").from("users")
         .then(data => {
           res.status(200).json({ message: "ok", data })
         })

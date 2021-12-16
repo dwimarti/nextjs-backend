@@ -10,7 +10,7 @@ async function handler(req, res) {
   await initMiddleware(req, res, cors)
   switch (req.method) {
     case "GET":
-      kyc.select("*").from("application")
+      kyc.select("*").from("call")
         .then(data => {
           res.status(200).json({ message: "ok", data })
         })

@@ -10,7 +10,7 @@ async function handler(req, res) {
   await initMiddleware(req, res, cors)
   switch (req.method) {
     case "GET":
-      asterisk.select("username", "password").from("ps_auths").limit(10)
+      asterisk.select("id", "aors", "auth", "allow", "dtmf_mode", "use_avpf", "media_encryption", "dtls_verify", "dtls_cert_file", "dtls_ca_file", "dtls_setup", "rtcp_mux").from("ps_endpoints")
       .then(data => {
         res.status(200).json({ message: "ok", data })
       })
@@ -20,7 +20,7 @@ async function handler(req, res) {
       break;
   
     default:
-      res.end("Hello");
+      res.status(405).send("Method not allowed")
       break;
   }
 }
