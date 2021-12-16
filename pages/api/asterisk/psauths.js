@@ -10,7 +10,7 @@ async function handler(req, res) {
   await initMiddleware(req, res, cors)
   switch (req.method) {
     case "GET":
-      asterisk.select("id", "realm", "md5_cred", "nonce_lifetime", "*").from("ps_auths")
+      asterisk.select("id", "realm", "md5_cred", "nonce_lifetime").from("ps_auths")
         .then(data => {
           res.status(200).json({ message: "ok", data })
         })
