@@ -10,7 +10,7 @@ async function handler(req, res) {
   await initMiddleware(req, res, cors)
   switch (req.method) {
     case "GET":
-      asterisk.select("nama", "created", "phone_number", "extension_user", "websocket", "role").from("users")
+      asterisk.select("nama", "created", "websocket", "role").from("users")
         .then(data => {
           res.status(200).json({ message: "ok", data })
         })
