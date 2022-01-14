@@ -48,14 +48,18 @@ async function IoHandler(req, res) {
 			let previousId;
 
 			const uploader = new siofu();
-			uploader.dir = `${process.cwd()}/files`;
+			uploader.dir = process.env.VIDEO_DIR;
 			uploader.listen(socket);
 
 			uploader.on("progress", function (event) {
 				socket.emit("upload.progress", {
-					percentage: (event.file.bytesLoaded / event.file.size) * 100,
+					percentage: parseInt((event.file.bytesLoaded / event.file.size) * 100),
 				});
 			});
+
+			uploader.on("complete", function (e) {
+				socket.emit("upload.done", e.file)
+			})
 
 			uploader.on("error", e => {
 				socket.emit("upload.error", e.message)
