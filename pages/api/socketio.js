@@ -12,7 +12,7 @@ const Cors = cors({
 export const getQueueMember = async ({ queueName }) => {
 	try {
 		let listQueue = [];
-		const target = "http://"+ process.env.DB_HOST +":8088/amxml?action=queuestatus";
+		const target = "https://"+ process.env.DB_HOST +":8089/amxml?action=queuestatus";
 		console.log(target);
 		const request = await amxmlFetch(target, "client", "cleint123");
 		const response = request["ajax-response"]["response"];
