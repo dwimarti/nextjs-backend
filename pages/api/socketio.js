@@ -52,6 +52,19 @@ async function IoHandler(req, res) {
 			uploader.dir = process.env.VIDEO_DIR;
 			uploader.listen(socket);
 
+			socket.on("textReceiveBroad", msg => {
+				socket.broadcast.emit("broadcastText", { 
+					message: msg,
+					id: socket.id
+				});
+			})
+			socket.on("textReceive", msg => {
+				socket.emit("emitText", { 
+					message: msg,
+					id: socket.id
+				});
+			})
+
 			uploader.on("progress", function (event) {
 				socket.emit("upload.progress", {
 					percentage: parseInt((event.file.bytesLoaded / event.file.size) * 100),

@@ -3,7 +3,7 @@ const next = require('next');
 const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
-const port = parseInt(process.env.PORT, 10) || dev ? 3000 : 5555;
+const port = parseInt(process.env.PORT, 10) || dev ? 3001 : 5555;
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
