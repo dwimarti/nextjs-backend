@@ -1,0 +1,17 @@
+#!/bin/bash
+ORIGIN=$1$2
+TEMPH264=$1temp-h264-$2
+TEMPORIGIN=$1temp-origin-$2
+
+ffmpeg -y -i $ORIGIN -vcodec libx264 -crf 30 $TEMPH264
+retval=$?
+echo $retval
+
+if [ $retval -eq 0 ] && [ -f "$TEMPH264" ]; then
+       echo "convert $2 success. Source : $3"
+        mv $ORIGIN $TEMPORIGIN
+        mv $TEMPH264 $ORIGIN
+        yes | rm $TEMPORIGIN
+else
+        echo "convert $2 failed. Source : $3"
+fi

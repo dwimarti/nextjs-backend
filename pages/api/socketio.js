@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import siofu from "socketio-file-upload";
 import asterisk from "@libs/knexOrm/asterisk";
 import cors from "cors";
+import { exec } from "child_process";
 import initMiddleware from "@libs/initMiddleware";
 import amxmlFetch from "@libs/amxml";
 
@@ -73,6 +74,21 @@ async function IoHandler(req, res) {
 
 			uploader.on("complete", function (e) {
 				socket.emit("upload.done", e.file)
+				//add bash converter
+				console.log("============================================");
+				console.log("Converter Running");
+				console.log("============================================");
+				console.log("filename : " + e.file.name);
+				console.log("path+filename : "+process.env.VIDEO_DIR+e.file.name);
+				console.log("============================================");
+
+				exec(`bash ${process.cwd()}/converter ${process.env.VIDEO_DIR} ${e.file.name} agent`,
+					(err, stdout, stderr) => {
+						if (err) console.log(err);
+						if (stderr) console.log(stderr);
+						console.log(stdout);
+					}
+				);
 			})
 
 			uploader.on("error", e => {
