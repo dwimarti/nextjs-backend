@@ -1,0 +1,6 @@
+#!/bin/bash
+if ps aux | grep -i "[f]fmpeg -i $1" ; then
+  echo "agent-running"
+elif ps aux | grep -i "[f]fmpeg -y -i $1" ; then
+  echo "spv-running"
+fi
