@@ -3,6 +3,7 @@ import initMiddleware from "@libs/initMiddleware";
 import fs from "fs";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
+import authorization from "@libs/authorization";
 
 const Cors = cors({
 	methods: ["GET", "POST"]
@@ -10,9 +11,11 @@ const Cors = cors({
 
 async function codecChecker(req, res) {
     await initMiddleware(req, res, Cors)
+    if(authorization(req.headers.authorization, res)) return;
+
     const { filename} = req.body;
     console.log("============================================");
-	console.log("Codec Checker Running");
+	  console.log("Codec Checker Running");
     console.log("============================================");
     console.log("filename : " + filename);
     console.log("path+filename : "+process.env.VIDEO_DIR+filename);
@@ -68,7 +71,6 @@ async function codecChecker(req, res) {
         res.status(500).send(error.message);
       }
 
-    // res.end();
 }
 
 export default codecChecker;

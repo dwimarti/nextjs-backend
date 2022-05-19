@@ -4,6 +4,7 @@ import fs from "fs";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
 import { exec } from "child_process";
+import authorization from "@libs/authorization";
 
 const Cors = cors({
 	methods: ["GET", "POST"]
@@ -11,6 +12,8 @@ const Cors = cors({
 
 async function convert(req, res) {
     await initMiddleware(req, res, Cors)
+    if(authorization(req.headers.authorization, res)) return;
+
     const { filename} = req.body;
     console.log("============================================");
 	  console.log("Standalone Converter Running");
