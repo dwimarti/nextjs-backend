@@ -22,7 +22,7 @@ async function codecChecker(req, res) {
     console.log("============================================");
     //check-file
     if (!fs.existsSync(process.env.VIDEO_DIR+filename)) {
-        res.status(404).json({
+        res.status(200).json({
         status: 0,
         message: "file not exists",
         filename: filename,
