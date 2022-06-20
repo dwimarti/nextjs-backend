@@ -55,7 +55,8 @@ async function IoHandler(req, res) {
 			console.log("[aux][starting] socket.id : "+ auxSocket.id + " extension : "+ extensions  +" status : "+ status)
 			//insert-when-handshake
 			if(extensions!=null & status!=null){
-				insertToActivity(status, extensions, auxSocket.id);
+				updateLatestIfNullOnAgentActivity(extensions);
+				insertToActivity(status, extensions, auxSocket.id, 'insert handshake');
 			}
 
 			auxSocket.on("statusEmit", msg => {
@@ -63,7 +64,7 @@ async function IoHandler(req, res) {
 				extensions = msg.extension;
 				status = msg.status;
 				//insert-when-emit-or-changes
-				insertToActivity(msg.status, msg.extension, auxSocket.id);
+				insertToActivity(msg.status, msg.extension, auxSocket.id, 'insert emit');
 
 				console.log("[aux][statusEmit] socket.id : "+ auxSocket.id + " extension : "+ msg.extension +" status : "+ msg.status)
 	 			auxSocket.emit("statusReceived", { 
@@ -71,25 +72,53 @@ async function IoHandler(req, res) {
 					extension: msg.extension
 				});
 			})
-			
-			auxSocket.on('disconnect', function() {
-				console.log('[aux] socket disconnect');
-				console.log('[aux] update last history from socket.id : ' + auxSocket.id + ' & extensions :' + extensions );
+
+			auxSocket.on("disconnectEmit", msg => {
+				console.log('[aux][emit][logout] socket disconnect emit');
 				if(extensions!=null & status!=null){
-					//update-when-disconnect
+					//update-when-disconnect-logout
 					asterisk('agent_activity').update({
 						date_end : asterisk.fn.now(),
 						duration: asterisk.raw("date_trunc('second', ?? - ??)",[asterisk.fn.now(), asterisk.ref('date_begin')]),
-						last_event: 'socket'
+						last_event_socket: asterisk.raw("concat( ?? , ' -> update on logout')", asterisk.ref('last_event_socket')),
+						logout:true
 					}).where('agent_status_id', status)
 					.andWhere('extension', extensions)
-					.andWhere('socket_id', auxSocket.id)
+					.andWhere('date_end', null)
 					.then( function (result) {
 						console.log(result);
 					})
 					.catch(err => {
 						console.log(err);
 					})
+
+					extensions=null;
+					status=null;
+				}
+				auxSocket.disconnect();
+			});
+			
+			auxSocket.on('disconnect', function() {
+				console.log('[aux] socket disconnect');
+
+				if(extensions!=null & status!=null){
+					console.log('[aux] update last history from socket.id : ' + auxSocket.id + ' & extensions :' + extensions );
+					//update-when-disconnect
+					asterisk('agent_activity').update({
+						date_end : asterisk.fn.now(),
+						duration: asterisk.raw("date_trunc('second', ?? - ??)",[asterisk.fn.now(), asterisk.ref('date_begin')]),
+						last_event_socket: asterisk.raw("concat( ?? , ' -> update on disconnect')", asterisk.ref('last_event_socket'))
+					}).where('agent_status_id', status)
+					.andWhere('extension', extensions)
+					.andWhere('date_end', null)
+					.then( function (result) {
+						console.log(result);
+					})
+					.catch(err => {
+						console.log(err);
+					})
+				}else{
+					console.log('[aux] user already logged out');
 				}
 			});
 		});
@@ -174,13 +203,30 @@ export const config = {
 	},
 };
 
-const insertToActivity = (e_status, e_extension, e_id) => {
+const insertToActivity = (e_status, e_extension, e_id, event) => {
 	asterisk('agent_activity').insert({
 		agent_status_id: e_status,
 		extension:e_extension,
 		date_begin:asterisk.fn.now(),
-		socket_id: e_id
+		socket_id: e_id,
+		last_event_socket: event
 		})
+	.then( function (result) {
+		console.log(result);
+	})
+	.catch(err => {
+		console.log(err);
+	})
+}
+
+const updateLatestIfNullOnAgentActivity = (e_extension) => {
+	asterisk('agent_activity').update({
+		date_end : asterisk.fn.now(),
+		duration: asterisk.raw("date_trunc('second', ?? - ??)", [asterisk.fn.now(), asterisk.ref('date_begin')]),
+		last_event_socket: asterisk.raw("concat( ?? , ' -> update on null')", asterisk.ref('last_event_socket')),
+		update_on_null: true
+	}).where('extension', e_extension)
+	.andWhere('date_end', null)
 	.then( function (result) {
 		console.log(result);
 	})
