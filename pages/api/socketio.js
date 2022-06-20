@@ -37,34 +37,74 @@ export const getQueueMember = async ({ queueName }) => {
 async function IoHandler(req, res) {
 	await initMiddleware(req, res, Cors)
 	if (!res.socket.server.io) {
-		console.log("*First use, starting socket.io");
-		let chat = [];
+		console.log("*first use, starting socket.io");
+
 		const io = new Server(res.socket.server, { 
 			cors: {
 				methods: ["GET", "POST"],
 				origin: "*"
 			} 
 		});
+		//aux-namespace
+		var aux = io.of('/aux');
+		aux.on('connection', (auxSocket) => {
+			let extensions;
+			let status;
+			extensions = auxSocket.handshake.query['extension'];
+			status = auxSocket.handshake.query['status'];
+			console.log("[aux][starting] socket.id : "+ auxSocket.id + " extension : "+ extensions  +" status : "+ status)
+			//insert-when-handshake
+			if(extensions!=null & status!=null){
+				insertToActivity(status, extensions, auxSocket.id);
+			}
 
+			auxSocket.on("statusEmit", msg => {
+				//update-for-disconnect
+				extensions = msg.extension;
+				status = msg.status;
+				//insert-when-emit-or-changes
+				insertToActivity(msg.status, msg.extension, auxSocket.id);
+
+				console.log("[aux][statusEmit] socket.id : "+ auxSocket.id + " extension : "+ msg.extension +" status : "+ msg.status)
+	 			auxSocket.emit("statusReceived", { 
+					status: msg.status,
+					extension: msg.extension
+				});
+			})
+			
+			auxSocket.on('disconnect', function() {
+				console.log('[aux] socket disconnect');
+				console.log('[aux] update last history from socket.id : ' + auxSocket.id + ' & extensions :' + extensions );
+				if(extensions!=null & status!=null){
+					//update-when-disconnect
+					asterisk('agent_activity').update({
+						date_end : asterisk.fn.now(),
+						duration: asterisk.raw("date_trunc('second', ?? - ??)",[asterisk.fn.now(), asterisk.ref('date_begin')]),
+						last_event: 'socket'
+					}).where('agent_status_id', status)
+					.andWhere('extension', extensions)
+					.andWhere('socket_id', auxSocket.id)
+					.then( function (result) {
+						console.log(result);
+					})
+					.catch(err => {
+						console.log(err);
+					})
+				}
+			});
+		});
+
+			
 		io.on("connection", (socket) => {
-			let previousId;
-
+			console.log("[uploader & queue], starting... ");
+			
 			const uploader = new siofu();
 			uploader.dir = process.env.VIDEO_DIR;
 			uploader.listen(socket);
-
-			socket.on("textReceiveBroad", msg => {
-				socket.broadcast.emit("broadcastText", { 
-					message: msg,
-					id: socket.id
-				});
-			})
-			socket.on("textReceive", msg => {
-				socket.emit("emitText", { 
-					message: msg,
-					id: socket.id
-				});
-			})
+			
+			uploader.on("start", function (event) {
+				console.log("[uploader], upload start... ");
+			});
 
 			uploader.on("progress", function (event) {
 				socket.emit("upload.progress", {
@@ -76,12 +116,12 @@ async function IoHandler(req, res) {
 				socket.emit("upload.done", e.file)
 				//add bash converter
 				console.log("============================================");
-				console.log("Converter Running");
+				console.log("Codec Checker Running");
 				console.log("============================================");
-				console.log("filename : " + e.file.name);
-				console.log("path+filename : "+process.env.VIDEO_DIR+e.file.name);
+				console.log("path : " + process.env.VIDEO_DIR);
+				console.log("filename : "+e.file.name);
 				console.log("============================================");
-
+				
 				exec(`bash ${process.cwd()}/converter ${process.env.VIDEO_DIR} ${e.file.name} agent`,
 					(err, stdout, stderr) => {
 						if (err) console.log(err);
@@ -93,10 +133,6 @@ async function IoHandler(req, res) {
 
 			uploader.on("error", e => {
 				socket.emit("upload.error", e.message)
-			})
-
-			socket.on("start", () => {
-				socket.emit("start", "halo ler")
 			})
 
 			socket.on("queue", () => {
@@ -116,31 +152,11 @@ async function IoHandler(req, res) {
 					}
 				}, 29000);
 			})
-
-			// socket.on("agentlist", function () {
-			// 	setInterval(() => {
-			// 		asterisk
-			// 			.select("username", "status", "websocket")
-			// 			.from("users")
-			// 			.where({ role: "1" })
-			// 			.orderBy("username")
-			// 			.then((data) => {
-			// 				socket.emit("agentlist", data);
-			// 			})
-			// 			.catch((err) => {
-			// 				socket.emit("agentlist", err.message);
-			// 			});
-			// 	}, 1000);
-			// });
-
-			const session = req.body.src;
-			socket.broadcast.emit("a user connected ", req.body.src);
-			socket.on(session, (data) => {
-				socket.emit(session, `Hallo ${session} u send ${data}`);
-			});
+	
 			socket.on('disconnect', function() {
-        console.log('socket disconnect');
-    });
+				console.log('[uploader & queue] socket disconnect');
+			});
+			
 		});
 
 		res.socket.server.io = io;
@@ -157,5 +173,20 @@ export const config = {
 		},
 	},
 };
+
+const insertToActivity = (e_status, e_extension, e_id) => {
+	asterisk('agent_activity').insert({
+		agent_status_id: e_status,
+		extension:e_extension,
+		date_begin:asterisk.fn.now(),
+		socket_id: e_id
+		})
+	.then( function (result) {
+		console.log(result);
+	})
+	.catch(err => {
+		console.log(err);
+	})
+}
 
 export default IoHandler;
