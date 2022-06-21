@@ -55,8 +55,7 @@ async function IoHandler(req, res) {
 			console.log("[aux][starting] socket.id : "+ auxSocket.id + " extension : "+ extensions  +" status : "+ status)
 			//insert-when-handshake
 			if(extensions!=null & status!=null){
-				updateLatestIfNullOnAgentActivity(extensions);
-				insertToActivity(status, extensions, auxSocket.id, 'insert handshake');
+				updateLatestIfNullOnAgentActivity(status, extensions, auxSocket.id, 'insert handshake');
 			}
 
 			auxSocket.on("statusEmit", msg => {
@@ -86,7 +85,8 @@ async function IoHandler(req, res) {
 					.andWhere('extension', extensions)
 					.andWhere('date_end', null)
 					.then( function (result) {
-						console.log(result);
+						// console.log(result);
+						console.log('update success');
 					})
 					.catch(err => {
 						console.log(err);
@@ -107,12 +107,15 @@ async function IoHandler(req, res) {
 					asterisk('agent_activity').update({
 						date_end : asterisk.fn.now(),
 						duration: asterisk.raw("date_trunc('second', ?? - ??)",[asterisk.fn.now(), asterisk.ref('date_begin')]),
-						last_event_socket: asterisk.raw("concat( ?? , ' -> update on disconnect')", asterisk.ref('last_event_socket'))
+						last_event_socket: asterisk.raw("concat( ?? , ' -> update on disconnect')", asterisk.ref('last_event_socket')),
+						disconnect: true
 					}).where('agent_status_id', status)
 					.andWhere('extension', extensions)
+					.andWhere('socket_id', auxSocket.id)
 					.andWhere('date_end', null)
 					.then( function (result) {
-						console.log(result);
+						// console.log(result);
+						console.log('update success');
 					})
 					.catch(err => {
 						console.log(err);
@@ -203,6 +206,25 @@ export const config = {
 	},
 };
 
+const updateLatestIfNullOnAgentActivity = (e_status, e_extension, e_id, event) => {
+	asterisk('agent_activity').update({
+		date_end : asterisk.fn.now(),
+		duration: asterisk.raw("date_trunc('second', ?? - ??)", [asterisk.fn.now(), asterisk.ref('date_begin')]),
+		last_event_socket: asterisk.raw("concat( ?? , ' -> update on null')", asterisk.ref('last_event_socket')),
+		update_on_null: true
+	}).where('extension', e_extension)
+	.andWhere('date_end', null)
+	.then( function (result) {
+		console.log('update success');
+		//insert-if-update-success
+		insertToActivity(e_status, e_extension, e_id, event);
+	})
+	.catch(err => {
+		console.log(err);
+		return resolve(false);
+	})
+}
+//insert-new-activity
 const insertToActivity = (e_status, e_extension, e_id, event) => {
 	asterisk('agent_activity').insert({
 		agent_status_id: e_status,
@@ -212,23 +234,7 @@ const insertToActivity = (e_status, e_extension, e_id, event) => {
 		last_event_socket: event
 		})
 	.then( function (result) {
-		console.log(result);
-	})
-	.catch(err => {
-		console.log(err);
-	})
-}
-
-const updateLatestIfNullOnAgentActivity = (e_extension) => {
-	asterisk('agent_activity').update({
-		date_end : asterisk.fn.now(),
-		duration: asterisk.raw("date_trunc('second', ?? - ??)", [asterisk.fn.now(), asterisk.ref('date_begin')]),
-		last_event_socket: asterisk.raw("concat( ?? , ' -> update on null')", asterisk.ref('last_event_socket')),
-		update_on_null: true
-	}).where('extension', e_extension)
-	.andWhere('date_end', null)
-	.then( function (result) {
-		console.log(result);
+		console.log('insert success');
 	})
 	.catch(err => {
 		console.log(err);
