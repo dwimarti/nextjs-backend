@@ -48,14 +48,14 @@ async function IoHandler(req, res) {
 		//aux-namespace
 		var aux = io.of('/aux');
 		aux.on('connection', (auxSocket) => {
-			let extensions;
-			let status;
-			extensions = auxSocket.handshake.query['extension'];
-			status = auxSocket.handshake.query['status'];
+			let extensions = auxSocket.handshake.query['extension'];
+			let status = auxSocket.handshake.query['status'];
+			let parent_id = auxSocket.handshake.query['parent_id'];
+
 			console.log("[aux][starting] socket.id : "+ auxSocket.id + " extension : "+ extensions  +" status : "+ status)
 			//insert-when-handshake
 			if(extensions!=null & status!=null){
-				updateLatestIfNullOnAgentActivity(status, extensions, auxSocket.id, 'insert handshake');
+				updateLatestIfNullOnAgentActivity(status, extensions, auxSocket.id, parent_id, 'insert handshake');
 			}
 
 			auxSocket.on("statusEmit", msg => {
@@ -63,7 +63,7 @@ async function IoHandler(req, res) {
 				extensions = msg.extension;
 				status = msg.status;
 				//insert-when-emit-or-changes
-				insertToActivity(msg.status, msg.extension, auxSocket.id, 'insert emit');
+				insertToActivity(msg.status, msg.extension, auxSocket.id, parent_id, 'insert emit');
 
 				console.log("[aux][statusEmit] socket.id : "+ auxSocket.id + " extension : "+ msg.extension +" status : "+ msg.status)
 	 			auxSocket.emit("statusReceived", { 
@@ -206,7 +206,7 @@ export const config = {
 	},
 };
 
-const updateLatestIfNullOnAgentActivity = (e_status, e_extension, e_id, event) => {
+const updateLatestIfNullOnAgentActivity = (e_status, e_extension, e_id,e_parent_id, event) => {
 	asterisk('agent_activity').update({
 		date_end : asterisk.fn.now(),
 		duration: asterisk.raw("date_trunc('second', ?? - ??)", [asterisk.fn.now(), asterisk.ref('date_begin')]),
@@ -217,21 +217,24 @@ const updateLatestIfNullOnAgentActivity = (e_status, e_extension, e_id, event) =
 	.then( function (result) {
 		console.log('update success');
 		//insert-if-update-success
-		insertToActivity(e_status, e_extension, e_id, event);
+		insertToActivity(e_status, e_extension, e_id, e_parent_id, event);
 	})
 	.catch(err => {
 		console.log(err);
-		return resolve(false);
 	})
 }
 //insert-new-activity
-const insertToActivity = (e_status, e_extension, e_id, event) => {
+const insertToActivity = (e_status, e_extension, e_id, e_parent_id, event) => {
 	asterisk('agent_activity').insert({
 		agent_status_id: e_status,
 		extension:e_extension,
 		date_begin:asterisk.fn.now(),
 		socket_id: e_id,
-		last_event_socket: event
+		update_on_null: false,
+		logout: false,
+		disconnect: false,
+		last_event_socket: event,
+		parent_socket_id: (e_parent_id!="null" ? e_parent_id : e_id)
 		})
 	.then( function (result) {
 		console.log('insert success');
