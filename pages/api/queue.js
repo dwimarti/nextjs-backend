@@ -73,12 +73,22 @@ async function queueChecker(req, res) {
                 e.queue === "kyc" && e.event === "QueueMember" && e.status === "8"
 		);
 
+        const kycOnQueueRingingList = listQueueAgent.filter(
+			(e) =>
+                e.queue === "kyc" && e.event === "QueueEntry" && e.connectedlinenum != "unknown"
+		);
+
+        const kycOnQueueList = listQueueAgent.filter(
+			(e) =>
+                e.queue === "kyc" && e.event === "QueueEntry" && e.connectedlinenum === "unknown"
+		);
+
 		if (kycQueue.length > 0) {
             res.status(200).send({ 
                 response : "success",
                 summary : {
                     numberOfExtensions : kycList.length,
-                    agent : {
+                    onlineAgent : {
                         total : kycAgentIdleList.length + kycAgentRingingList.length + kycAgentIncallList.length + kycAgentOnHoldList.length,
                         details : {
                             idle : kycAgentIdleList.length,
@@ -101,8 +111,10 @@ async function queueChecker(req, res) {
                             total : kycCustomerQueueInUse.length + kycCustomerQueueOnHold.length,
                             details : {
                                 inCall : kycAgentIncallList.length,
-                                inQueue : ((kycCustomerQueueInUse.length + kycCustomerQueueOnHold.length)- kycAgentRingingList.length) - kycAgentIncallList.length,
-                                ringing : kycAgentRingingList.length
+                                inQueueV1 : ((kycCustomerQueueInUse.length + kycCustomerQueueOnHold.length) - kycAgentRingingList.length) - kycAgentIncallList.length,
+                                inQueueV2 : kycOnQueueList.length,
+                                ringingV1 : kycAgentRingingList.length,
+                                ringingV2 : kycOnQueueRingingList.length
                             },
                         }
                     },
@@ -112,39 +124,58 @@ async function queueChecker(req, res) {
                     }
                 },
                 data :{
-                    numberOfExtensions : kycList.length,
+                    total : kycList.length,
                     extensionsOnline :{
-                        numberOfExtensions : kycQueue.length,
+                        total : kycQueue.length,
                         list : kycQueue
                     },
                     customerOnline :{
-                        numberOfExtensions : kycCustomerQueueInUse.length + kycCustomerQueueNotInUse.length,
+                        total : kycCustomerQueueInUse.length + kycCustomerQueueNotInUse.length,
                         InUse : {
-                            numberOfExtensions : kycCustomerQueueInUse.length,
+                            total : kycCustomerQueueInUse.length,
                             list : kycCustomerQueueInUse
                         },
                         notInUse : {
-                            count : kycCustomerQueueNotInUse.length,
+                            total : kycCustomerQueueNotInUse.length,
                             list : kycCustomerQueueNotInUse
+                        },
+                        onHold : {
+                            total : kycCustomerQueueOnHold.length,
+                            list : kycCustomerQueueOnHold
+                        },
+                        ringingV2 : {
+                            total : kycOnQueueRingingList.length,
+                            list : kycOnQueueRingingList
+                        },
+                        inQueueV2 : {
+                            total : kycOnQueueList.length,
+                            list : kycOnQueueList
                         }
                     }, 
                     agentOnline :{
-                        numberOfExtensions : kycAgentIdleList.length + kycAgentRingingList.length + kycAgentIncallList.length,
+                        total : kycAgentIdleList.length + kycAgentRingingList.length + kycAgentIncallList.length,
                         idle : {
-                            numberOfExtensions : kycAgentIdleList.length,
+                            total : kycAgentIdleList.length,
                             list : kycAgentIdleList
                         },
                         ringing : {
-                            count : kycAgentRingingList.length,
+                            total : kycAgentRingingList.length,
                             list : kycAgentRingingList
                         },
                         incall : {
-                            count : kycAgentIncallList.length,
+                            total : kycAgentIncallList.length,
                             list : kycAgentIncallList
+                        },
+                        holdByCustomer : {
+                            total : kycAgentOnHoldList.length,
+                            list : kycAgentOnHoldList
+                        },
+                        holdByAgent : {
+                            total : kycCustomerQueueOnHold.length,
+                            list : kycCustomerQueueOnHold
                         }
-                    }, 
-
-                    },
+                    }
+                },
             })    
 		} else {
             res.status(200).send({ 
