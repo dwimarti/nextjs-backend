@@ -181,7 +181,7 @@ async function queueChecker(req, res) {
             res.status(200).send({ 
                 response : "success",
                 data :{ 
-                    message : "no extensions found",
+                    message : "no users currently online",
                     numberOfExtensions : kycList.length,
                     kycQueueLength : kycQueue.length
                     }
