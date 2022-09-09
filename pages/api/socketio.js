@@ -42,7 +42,7 @@ async function IoHandler(req, res) {
 		const io = new Server(res.socket.server, { 
 			cors: {
 				methods: ["GET", "POST"],
-				origin: "*"
+				//origin: "https://localhost:3003"
 			} 
 		});
 		//aux-namespace
@@ -78,7 +78,7 @@ async function IoHandler(req, res) {
 					//update-when-disconnect-logout
 					asterisk('agent_activity').update({
 						date_end : asterisk.fn.now(),
-						duration: asterisk.raw("date_trunc('second', ?? - ??)",[asterisk.fn.now(), asterisk.ref('date_begin')]),
+						duration: asterisk.raw("extract(epoch from date_trunc('second', ?? - ??))",[asterisk.fn.now(), asterisk.ref('date_begin')]),
 						last_event_socket: asterisk.raw("concat( ?? , ' -> update on logout')", asterisk.ref('last_event_socket')),
 						logout:true
 					}).where('agent_status_id', status)
@@ -106,7 +106,7 @@ async function IoHandler(req, res) {
 					//update-when-disconnect
 					asterisk('agent_activity').update({
 						date_end : asterisk.fn.now(),
-						duration: asterisk.raw("date_trunc('second', ?? - ??)",[asterisk.fn.now(), asterisk.ref('date_begin')]),
+						duration: asterisk.raw("extract(epoch from date_trunc('second', ?? - ??))",[asterisk.fn.now(), asterisk.ref('date_begin')]),
 						last_event_socket: asterisk.raw("concat( ?? , ' -> update on disconnect')", asterisk.ref('last_event_socket')),
 						disconnect: true
 					}).where('agent_status_id', status)
@@ -209,7 +209,7 @@ export const config = {
 const updateLatestIfNullOnAgentActivity = (e_status, e_extension, e_id,e_parent_id, event) => {
 	asterisk('agent_activity').update({
 		date_end : asterisk.fn.now(),
-		duration: asterisk.raw("date_trunc('second', ?? - ??)", [asterisk.fn.now(), asterisk.ref('date_begin')]),
+		duration: asterisk.raw("extract(epoch from date_trunc('second', ?? - ??))", [asterisk.fn.now(), asterisk.ref('date_begin')]),
 		last_event_socket: asterisk.raw("concat( ?? , ' -> update on null')", asterisk.ref('last_event_socket')),
 		update_on_null: true
 	}).where('extension', e_extension)
@@ -234,7 +234,7 @@ const insertToActivity = (e_status, e_extension, e_id, e_parent_id, event) => {
 		logout: false,
 		disconnect: false,
 		last_event_socket: event,
-		parent_socket_id: (e_parent_id!="null" ? e_parent_id : e_id)
+		parent_socket_id: (e_parent_id=="undefined" ? e_id : e_parent_id=="" ? "[session-edited]" : e_parent_id) 
 		})
 	.then( function (result) {
 		console.log('insert success');
